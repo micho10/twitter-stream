@@ -12,6 +12,8 @@ libraryDependencies ++= Seq(
   ws,
   specs2 % Test
 )
+// Workaround for a bug in Play 2.4 with OAuth
+libraryDependencies += "com.ning" % "async-http-client" % "1.9.29"
 
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 
