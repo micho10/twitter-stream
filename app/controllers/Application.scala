@@ -52,8 +52,8 @@ class Application extends Controller {
     }
   }
 
+  // Retrieves the Twitter credentials from application.conf
   def credentials: Option[(ConsumerKey, RequestToken)] = for {
-    // Retrieves the Twitter credentials from application.conf
     apiKey      <- Play.configuration.getString("twitter.apiKey")
     apiSecret   <- Play.configuration.getString("twitter.apiSecret")
     token       <- Play.configuration.getString("twitter.token")
