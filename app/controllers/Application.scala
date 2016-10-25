@@ -2,6 +2,7 @@ package controllers
 
 import play.api.Play.current
 import play.api._
+import play.api.libs.iteratee.Iteratee
 import play.api.libs.oauth.{ConsumerKey, OAuthCalculator, RequestToken}
 import play.api.libs.ws.WS
 import play.api.mvc._
@@ -17,16 +18,11 @@ class Application extends Controller {
 
   // Uses "Action.async" to return a Future of a result for the next step
   def tweets = Action.async {
-    def credentials: Option[ (ConsumerKey, RequestToken) ] = for {
-      // Retrieves the Twitter credentials from application.conf
-      apiKey      <- Play.configuration.getString("twitter.apiKey")
-      apiSecret   <- Play.configuration.getString("twitter.apiSecret")
-      token       <- Play.configuration.getString("twitter.token")
-      tokenSecret <- Play.configuration.getString("twitter.tokenSecret")
-    } yield  (
-      ConsumerKey(apiKey, apiSecret),
-      RequestToken(token, tokenSecret)
-      )
+
+    // Defines a logging iteratee that consumes a stream asynchronously and logs the contents when the data is available
+    val loggingIteratee = Iteratee.foreach[Array[Byte]] { array =>
+      Logger.info(array.map(_.toChar).mkString)
+    }
 
     credentials.map { case (consumerKey, requestToken) =>
       WS
@@ -36,10 +32,15 @@ class Application extends Controller {
         .sign(OAuthCalculator(consumerKey, requestToken))
         // Specifies a query string parameter
         .withQueryString("track" -> "reactive")
-        // Executes an HTTP GET request
-        .get()
-        .map {
-          response => Ok(response.body)
+        // Sends an HTTP GET request to the server and retrieves the response as a (possibly infinite) stream
+        .get { response =>
+          Logger.info("Status: " + response.status)
+          // Feeds the stream directly into the consuming logging iteratee;
+          // the contents aren't loaded in memory first but are directly passed to the iteratee
+          loggingIteratee
+        }.map { _ =>
+          // Returns a 200 OK result when the stream is entirely consumed or closed
+          Ok("Stream closed")
         }
 
     } getOrElse {
@@ -50,5 +51,16 @@ class Application extends Controller {
       }
     }
   }
+
+  def credentials: Option[(ConsumerKey, RequestToken)] = for {
+    // Retrieves the Twitter credentials from application.conf
+    apiKey      <- Play.configuration.getString("twitter.apiKey")
+    apiSecret   <- Play.configuration.getString("twitter.apiSecret")
+    token       <- Play.configuration.getString("twitter.token")
+    tokenSecret <- Play.configuration.getString("twitter.tokenSecret")
+  } yield (
+      ConsumerKey(apiKey, apiSecret),
+      RequestToken(token, tokenSecret)
+    )
 
 }
