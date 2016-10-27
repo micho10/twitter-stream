@@ -50,7 +50,7 @@ class Application extends Controller {
           Logger.info("Status: " + response.status)
           // Provides the iteratee as the entry point of the data streamed through the HTTP connection. The stream
           // consumed by the iteratee will be passed on to the enumerator, which itself is the data source of the
-          // jsonStream. All the data streaming takes place in a nonblocking fashion.
+          // jsonStream. All the data streaming takes place in a non-blocking fashion.
           iteratee
         }.map { _ =>
           // Returns a 200 OK result when the stream is entirely consumed or closed
