@@ -2,9 +2,7 @@ package controllers
 
 import actors.TwitterStreamer
 import play.api.Play.current
-import play.api._
 import play.api.libs.json.JsValue
-import play.api.libs.oauth.{ConsumerKey, RequestToken}
 import play.api.mvc._
 
 class Application extends Controller {
@@ -65,17 +63,15 @@ class Application extends Controller {
   }
 
 
-
-
-  // Retrieves the Twitter credentials from application.conf
-  def credentials: Option[(ConsumerKey, RequestToken)] = for {
-    apiKey      <- Play.configuration.getString("twitter.apiKey")
-    apiSecret   <- Play.configuration.getString("twitter.apiSecret")
-    token       <- Play.configuration.getString("twitter.token")
-    tokenSecret <- Play.configuration.getString("twitter.tokenSecret")
-  } yield (
-      ConsumerKey(apiKey, apiSecret),
-      RequestToken(token, tokenSecret)
-    )
+//  // Retrieves the Twitter credentials from application.conf
+//  def credentials: Option[(ConsumerKey, RequestToken)] = for {
+//    apiKey      <- Play.configuration.getString("twitter.apiKey")
+//    apiSecret   <- Play.configuration.getString("twitter.apiSecret")
+//    token       <- Play.configuration.getString("twitter.token")
+//    tokenSecret <- Play.configuration.getString("twitter.tokenSecret")
+//  } yield (
+//      ConsumerKey(apiKey, apiSecret),
+//      RequestToken(token, tokenSecret)
+//    )
 
 }

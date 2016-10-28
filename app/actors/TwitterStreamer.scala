@@ -1,11 +1,11 @@
 package actors
 
 import akka.actor.{Actor, ActorRef, Props}
-import play.api.Logger
+import play.api.{Logger, Play}
 import play.api.Play.current
 import play.api.libs.iteratee.{Concurrent, Enumeratee, Enumerator, Iteratee}
 import play.api.libs.json.JsObject
-import play.api.libs.oauth.OAuthCalculator
+import play.api.libs.oauth.{ConsumerKey, OAuthCalculator, RequestToken}
 import play.api.libs.ws.WS
 import play.extras.iteratees.{Encoding, JsonIteratees}
 
@@ -93,5 +93,17 @@ object TwitterStreamer {
       enumerator run twitterClient
     }
   }
+
+
+  // Retrieves the Twitter credentials from application.conf
+  def credentials: Option[(ConsumerKey, RequestToken)] = for {
+    apiKey      <- Play.configuration.getString("twitter.apiKey")
+    apiSecret   <- Play.configuration.getString("twitter.apiSecret")
+    token       <- Play.configuration.getString("twitter.token")
+    tokenSecret <- Play.configuration.getString("twitter.tokenSecret")
+  } yield (
+    ConsumerKey(apiKey, apiSecret),
+    RequestToken(token, tokenSecret)
+    )
 
 }
