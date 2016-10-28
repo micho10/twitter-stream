@@ -24,6 +24,7 @@ class TwitterStreamer(out: ActorRef) extends Actor {
 }
 
 object TwitterStreamer {
-  // Helper method that initializes a new Props object
+  // Helper method that initializes a new Props object.
+  // Play will use the Props object to initialize the actor
   def props(out: ActorRef) = Props(new TwitterStreamer(out))
 }
