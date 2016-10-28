@@ -2,11 +2,14 @@ package actors
 
 import akka.actor.{Actor, ActorRef, Props}
 import play.api.Logger
-import play.api.libs.iteratee.{Concurrent, Enumeratee, Enumerator}
-import play.api.libs.json.{JsObject, Json}
+import play.api.Play.current
+import play.api.libs.iteratee.{Concurrent, Enumeratee, Enumerator, Iteratee}
+import play.api.libs.json.JsObject
 import play.api.libs.oauth.OAuthCalculator
 import play.api.libs.ws.WS
 import play.extras.iteratees.{Encoding, JsonIteratees}
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * Created by carlos on 27/10/16.
@@ -22,10 +25,12 @@ class TwitterStreamer(out: ActorRef) extends Actor {
       // Sends out a simple Hello World message as a JSON object
       // "!" is an alias for the "tell" method, which means "fire & forget" a message without waiting for a reply nor
       // delivery confirmation
-      out ! Json.obj("text" -> "Hello, world!")
+      TwitterStreamer.subscribe(out)
   }
 
 }
+
+
 
 object TwitterStreamer {
   // Helper method that initializes a new Props object.
@@ -76,4 +81,17 @@ object TwitterStreamer {
       Logger.error("Twitter credentials missing")
     }
   }
+
+
+  def subscribe(out: ActorRef): Unit = {
+    // Check if there's an initialized broadcast enumerator. If there's not, establish a connection
+    if (broadcastEnumerator.isEmpty) connect()
+
+    // Create a Twitter client iteratee JSON object to the browser using an actor reference
+    val twitterClient = Iteratee.foreach[JsObject] { t => out ! t }
+    broadcastEnumerator.foreach { enumerator =>
+      enumerator run twitterClient
+    }
+  }
+
 }
