@@ -64,7 +64,7 @@ object TwitterStreamer {
         // OAuth signature of the request
         .sign(OAuthCalculator(consumerKey, requestToken))
         // Specifies a query string parameter
-        .withQueryString("track" -> "reactive")
+        .withQueryString("track" -> "warmachine")
         // Sends an HTTP GET request to the server and retrieves the response as a (possibly infinite) stream
         .get { response =>
           Logger.info("Status: " + response.status)
