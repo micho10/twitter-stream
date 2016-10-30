@@ -15,4 +15,10 @@ class Application extends Controller {
     request => out => TwitterStreamer.props(out)
   }
 
+  // Streaming the replicated Twitter feed
+  def replicateFeed = Action { implicit request =>
+    // Feeds the stream provided by the enumerator as an HTTP request
+    Ok.feed(TwitterStreamer.subscribeNode)
+  }
+
 }

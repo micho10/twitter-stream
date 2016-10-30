@@ -31,7 +31,6 @@ class TwitterStreamer(out: ActorRef) extends Actor {
 }
 
 
-
 object TwitterStreamer {
   // Helper method that initializes a new Props object.
   // Play will use the Props object to initialize the actor
@@ -56,7 +55,12 @@ object TwitterStreamer {
       val (be, _) = Concurrent.broadcast(jsonStream)
       broadcastEnumerator = Some(be)
 
-      val url = "https://stream.twitter.com/1.1/statuses/filter.json"
+      // Allow replicated nodes to connect to the master node.
+      // Use the application configuration instead for production deployment.
+      val maybeMasterNodeUrl = Option(System.getProperty("masterNodeUrl"))
+      val url = maybeMasterNodeUrl.getOrElse {
+        "https://stream.twitter.com/1.1/statuses/filter.json"
+      }
 
       WS
         // The API URL
@@ -64,7 +68,7 @@ object TwitterStreamer {
         // OAuth signature of the request
         .sign(OAuthCalculator(consumerKey, requestToken))
         // Specifies a query string parameter
-        .withQueryString("track" -> "warmachine")
+        .withQueryString("track" -> "cat")
         // Sends an HTTP GET request to the server and retrieves the response as a (possibly infinite) stream
         .get { response =>
           Logger.info("Status: " + response.status)
@@ -91,6 +95,20 @@ object TwitterStreamer {
     val twitterClient = Iteratee.foreach[JsObject] { t => out ! t }
     broadcastEnumerator.foreach { enumerator =>
       enumerator run twitterClient
+    }
+  }
+
+
+  /*
+   * First, check the connection with Twitter is initialized. Then, returns the broadcasting enumeratee, which can be
+   * used in an application controller.
+   */
+  def subscribeNode: Enumerator[JsObject] = {
+    if (broadcastEnumerator.isEmpty) {
+      connect()
+    }
+    broadcastEnumerator.getOrElse {
+      Enumerator.empty[JsObject]
     }
   }
 
