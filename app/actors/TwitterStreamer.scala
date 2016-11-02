@@ -31,6 +31,7 @@ class TwitterStreamer(out: ActorRef) extends Actor {
 }
 
 
+
 object TwitterStreamer {
   // Helper method that initializes a new Props object.
   // Play will use the Props object to initialize the actor
@@ -58,9 +59,7 @@ object TwitterStreamer {
       // Allow replicated nodes to connect to the master node.
       // Use the application configuration instead for production deployment.
       val maybeMasterNodeUrl = Option(System.getProperty("masterNodeUrl"))
-      val url = maybeMasterNodeUrl.getOrElse {
-        "https://stream.twitter.com/1.1/statuses/filter.json"
-      }
+      val url = maybeMasterNodeUrl.getOrElse("https://stream.twitter.com/1.1/statuses/filter.json")
 
       WS
         // The API URL
@@ -81,9 +80,7 @@ object TwitterStreamer {
           // Returns a 200 OK result when the stream is entirely consumed or closed
           Logger.info("Twitter stream closed")
         }
-    } getOrElse {
-      Logger.error("Twitter credentials missing")
-    }
+    } getOrElse Logger.error("Twitter credentials missing")
   }
 
 
@@ -93,9 +90,7 @@ object TwitterStreamer {
 
     // Create a Twitter client iteratee JSON object to the browser using an actor reference
     val twitterClient = Iteratee.foreach[JsObject] { t => out ! t }
-    broadcastEnumerator.foreach { enumerator =>
-      enumerator run twitterClient
-    }
+    broadcastEnumerator.foreach ( enumerator => enumerator run twitterClient )
   }
 
 
@@ -104,12 +99,9 @@ object TwitterStreamer {
    * used in an application controller.
    */
   def subscribeNode: Enumerator[JsObject] = {
-    if (broadcastEnumerator.isEmpty) {
-      connect()
-    }
-    broadcastEnumerator.getOrElse {
-      Enumerator.empty[JsObject]
-    }
+    if (broadcastEnumerator.isEmpty) connect()
+
+    broadcastEnumerator.getOrElse(Enumerator.empty[JsObject])
   }
 
 
