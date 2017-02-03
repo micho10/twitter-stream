@@ -4,7 +4,9 @@
 
 # Home page
 GET     /                           controllers.Application.index
-GET     /tweets                     controllers.Application.tweets
+GET     /stream                     controllers.Application.stream
+GET     /messages                   controllers.Application.messages
+GET     /socket                     controllers.Application.socket
 GET     /replicatedFeed             controllers.Application.replicateFeed
 
 # Map static resources from the /public folder to the /assets URL path

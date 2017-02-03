@@ -1,12 +1,12 @@
 package actors
 
-import akka.actor.{Actor, ActorRef, Props}
-import play.api.{Logger, Play}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import play.api.Play.current
 import play.api.libs.iteratee.{Concurrent, Enumeratee, Enumerator, Iteratee}
 import play.api.libs.json.JsObject
 import play.api.libs.oauth.{ConsumerKey, OAuthCalculator, RequestToken}
 import play.api.libs.ws.WS
+import play.api.{Logger, Play}
 import play.extras.iteratees.{Encoding, JsonIteratees}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
   * Created by carlos on 27/10/16.
   */
-class TwitterStreamer(out: ActorRef) extends Actor {
+class TwitterStreamer(out: ActorRef) extends Actor with ActorLogging {
 
   // The receive method handles messages sent to this actor
   // Partial function (function defined only for some values of x)
@@ -26,6 +26,10 @@ class TwitterStreamer(out: ActorRef) extends Actor {
       // "!" is an alias for the "tell" method, which means "fire & forget" a message without waiting for a reply nor
       // delivery confirmation
       TwitterStreamer.subscribe(out)
+
+    case message: String =>
+      Logger.info(s"Received message $message")
+      out ! s"Pong: $message"
   }
 
 }
@@ -35,7 +39,8 @@ class TwitterStreamer(out: ActorRef) extends Actor {
 object TwitterStreamer {
   // Helper method that initializes a new Props object.
   // Play will use the Props object to initialize the actor
-  def props(out: ActorRef) = Props(new TwitterStreamer(out))
+//  def props(out: ActorRef) = Props(new TwitterStreamer(out))
+  def props(out: ActorRef) = Props(classOf[TwitterStreamer], out)
 
   // Initializes an empty variable to hold the broadcast enumerator
   private var broadcastEnumerator: Option[Enumerator[JsObject]] = None
@@ -111,9 +116,6 @@ object TwitterStreamer {
     apiSecret   <- Play.configuration.getString("twitter.apiSecret")
     token       <- Play.configuration.getString("twitter.token")
     tokenSecret <- Play.configuration.getString("twitter.tokenSecret")
-  } yield (
-    ConsumerKey(apiKey, apiSecret),
-    RequestToken(token, tokenSecret)
-    )
+  } yield (ConsumerKey(apiKey, apiSecret), RequestToken(token, tokenSecret))
 
 }
