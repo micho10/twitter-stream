@@ -2,6 +2,14 @@ Reactive webapp demo
 =================================
 
 
-1.-
+1.- Master Node:
+    &> sbt
+    $> run
+
+2.- Replicated Nodes:
+    &> activator -DmasterNodeUrl=http://localhost:9000/replicatedFeed
+    $> run
+
+
 
 

@@ -1,6 +1,9 @@
 @(message: String)(implicit request: RequestHeader)
 
 @main(message) {
+
+    @play20.welcome(message)
+
     <!-- The container in which the tweets will be displayed-->
     <div id="tweets"></div>
     <script type="text/javascript">
@@ -50,7 +53,5 @@
         // Indicates the first connection attempt
         connect(1)
     </script>
-
-    @play20.welcome(message)
 
 }

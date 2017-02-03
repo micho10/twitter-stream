@@ -18,7 +18,7 @@ class TwitterStreamer(out: ActorRef) extends Actor {
 
   // The receive method handles messages sent to this actor
   // Partial function (function defined only for some values of x)
-  def receive = {
+  override def receive = {
     // Handles the case of receiving a "subscribe" message
     case "subscribe" =>
       Logger.info("Received subscription from a client")
@@ -67,7 +67,7 @@ object TwitterStreamer {
         // OAuth signature of the request
         .sign(OAuthCalculator(consumerKey, requestToken))
         // Specifies a query string parameter
-        .withQueryString("track" -> "cat")
+        .withQueryString("track" -> "Trump")
         // Sends an HTTP GET request to the server and retrieves the response as a (possibly infinite) stream
         .get { response =>
           Logger.info("Status: " + response.status)
