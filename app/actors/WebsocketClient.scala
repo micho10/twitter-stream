@@ -1,9 +1,9 @@
 package actors
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import play.api.{Logger, Play}
+import akka.actor.{Actor, ActorRef, Props}
 import play.api.libs.oauth.{ConsumerKey, OAuthCalculator, RequestToken}
 import play.api.libs.ws.{WS, WSResponse}
+import play.api.{Logger, Play}
 
 import scala.concurrent.Future
 
@@ -20,9 +20,9 @@ class WebsocketClient(out: ActorRef) extends Actor {
     case message: String =>
       credentials.map { case (consumerKey, requestToken) =>
         Logger.info(s"Received message $message")
-        val response : Future[WSResponse] = WS
+        val response: Future[WSResponse] = WS
           // The API URL
-          .url("https://stream.twitter.com/1.1/statuses/filter.json")
+          .url("https://api.twitter.com/1.1/search/tweets.json")
           // Specifies a query string parameter
           .withQueryString("q" -> message)
           // OAuth signature of the request
@@ -35,6 +35,7 @@ class WebsocketClient(out: ActorRef) extends Actor {
         }
       }
   }
+
 
   // Retrieves the Twitter credentials from application.conf
   def credentials: Option[(ConsumerKey, RequestToken)] = for {

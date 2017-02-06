@@ -17,11 +17,13 @@
             document.getElementById("messages").appendChild(p);
         }
 
-        @*var url = "@routes.Application.messages().webSocketURL()";*@
         var socket = new WebSocket("@routes.Application.socket().webSocketURL()");
         socket.onmessage = function(event) {
             console.log(event);
-            appendMessage(event.data)
+            var json = JSON.parse(event.data)
+            $.each(json.statuses, function (index, tweet) {
+                appendMessage(tweet.text)
+            })
         };
 
         $('#send').on('click', function(event){
