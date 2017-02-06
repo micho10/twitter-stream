@@ -6,6 +6,7 @@ import play.api.libs.ws.{WS, WSResponse}
 import play.api.{Logger, Play}
 
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 /**
   * Created by carlos on 27/10/16.
@@ -18,22 +19,33 @@ class WebsocketClient(out: ActorRef) extends Actor {
 
   override def receive = {
     case message: String =>
+      Logger.info(s"Received message $message")
+
       credentials.map { case (consumerKey, requestToken) =>
-        Logger.info(s"Received message $message")
-        val response: Future[WSResponse] = WS
+        val searchResult: Future[WSResponse] = WS
           // The API URL
           .url("https://api.twitter.com/1.1/search/tweets.json")
           // Specifies a query string parameter
           .withQueryString("q" -> message)
           // OAuth signature of the request
           .sign(OAuthCalculator(consumerKey, requestToken))
+          /***** Set an unrealistic timeout to simulate Twitter being unavailable. *****/
+          .withRequestTimeout(1)
           // Sends an HTTP GET request to the server and retrieves the response as a (possibly infinite) stream
           .get()
 
-        response.map { r =>
-          out ! r.body
-        }
+        import akka.pattern.pipe
+
+        searchResult.map { result =>
+          SearchResult(result.body)
+        } recover { case NonFatal(t) =>
+          SearchFailure(t)
+        } pipeTo self
       }
+
+    case SearchResult(result) => out ! result
+
+    case SearchFailure(t) => out ! s"Ooops, something went wrong: ${t.getMessage}"
   }
 
 

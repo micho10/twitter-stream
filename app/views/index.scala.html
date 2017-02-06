@@ -20,10 +20,14 @@
         var socket = new WebSocket("@routes.Application.socket().webSocketURL()");
         socket.onmessage = function(event) {
             console.log(event);
-            var json = JSON.parse(event.data)
-            $.each(json.statuses, function (index, tweet) {
-                appendMessage(tweet.text)
-            })
+            try {
+                var json = JSON.parse(event.data);
+                $.each(json.statuses, function (index, tweet) {
+                    appendMessage(tweet.text);
+                })
+            } catch(e) {
+                appendMessage(event.data);
+            }
         };
 
         $('#send').on('click', function(event){
