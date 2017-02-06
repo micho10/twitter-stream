@@ -17,8 +17,10 @@ libraryDependencies ++= Seq(
   ws,
   specs2                      %   Test,
   // Workaround for a bug in Play 2.4 with OAuth
-  "com.ning"                  %   "async-http-client" % "1.9.40",
-  "com.typesafe.play.extras"  %%  "iteratees-extras"  % "1.5.0"
+  "com.ning"                  %   "async-http-client"             % "1.9.40",
+  "com.typesafe.play.extras"  %%  "iteratees-extras"              % "1.5.0",
+  "com.typesafe.play"         %%  "play-streams-experimental"     % "2.4.2",
+  "com.typesafe.akka"         %   "akka-stream-experimental_2.11" % "1.0"
 )
 
 // Play provides two styles of routers, one expects its actions to be injected,
