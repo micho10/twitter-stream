@@ -3,17 +3,18 @@ package services
 import javax.inject.Inject
 
 import akka.actor.ActorSystem
-import play.Logger
-import play.api.Configuration
+import akka.stream.scaladsl.Source
+import org.reactivestreams.Publisher
+import play.api.Play.current
 import play.api.libs.iteratee.{Concurrent, Enumeratee, Enumerator}
 import play.api.libs.json.JsObject
 import play.api.libs.oauth.{ConsumerKey, OAuthCalculator, RequestToken}
+import play.api.libs.streams.Streams
 import play.api.libs.ws.{WS, WSAPI}
+import play.api.{Configuration, Logger}
 import play.extras.iteratees.{Encoding, JsonIteratees}
 
 import scala.concurrent.ExecutionContext
-
-import play.api.Play.current
 
 /**
   * Created by carlos on 06/02/17.
@@ -72,4 +73,14 @@ class TwitterStreamService @Inject()(
     jsonStream
   }
 
+
+  private def enumeratorToSource[Out](enum: Enumerator[Out]): Source[Out, Unit] = {
+    // Turns the enumerator into a Reactive Streams publisher
+    val publisher: Publisher[Out] = Streams.enumeratorToPublisher(enum)
+    // Turns the publisher into an Akka Streams source
+    Source(publisher)
+  }
+
+
+  
 }
