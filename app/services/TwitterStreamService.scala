@@ -1,19 +1,19 @@
 package services
 
+import javafx.scene.control.TreeItem
 import javax.inject.Inject
 
 import akka.actor.ActorSystem
-import akka.stream.{Attributes, FanOutShape}
-import akka.stream.scaladsl.FlexiRoute
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl._
+import akka.stream.{ActorMaterializer, Attributes, FanOutShape, Outlet}
 import org.reactivestreams.Publisher
 import play.api.Play.current
 import play.api.libs.iteratee.{Concurrent, Enumeratee, Enumerator}
-import play.api.libs.json.{JsArray, JsObject, JsValue}
+import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 import play.api.libs.oauth.{ConsumerKey, OAuthCalculator, RequestToken}
 import play.api.libs.streams.Streams
 import play.api.libs.ws.{WS, WSAPI}
-import play.api.{Configuration, Logger}
+import play.api.{Configuration, Logger, Play}
 import play.extras.iteratees.{Encoding, JsonIteratees}
 
 import scala.concurrent.ExecutionContext
@@ -105,7 +105,7 @@ class TwitterStreamService @Inject()(
     class SplitByTopicShape[A <: JsObject](_init: Init[A] = Name[A]("SplitByTopic")) extends FanOutShape[A](_init) {
       protected override def construct(i: Init[A]) = new SplitByTopicShape(i)
       // Creates one output port per topic and keeps these ports in a map so that you can retrieve them by topic later
-      val topicOutlets = topicsAndDigestRate.keys.map { topic =>
+      val topicOutlets: Map[String, Outlet[A]] = topicsAndDigestRate.keys.map { topic =>
         topic -> newOutlet[A]("out-" + topic)
       }.toMap
     }
@@ -128,7 +128,7 @@ class TwitterStreamService @Inject()(
         */
       override def createRouteLogic(p: PortT) = new RouteLogic[A] {
         // Extracts the first topic out of a tweet. You'll split using only the first topic in this example.
-        def extractFirstHashTag(tweet: JsObject) =
+        def extractFirstHashTag(tweet: JsObject): Option[String] =
           (tweet \ "entities" \ "hashtags")
             .asOpt[JsArray]
             .flatMap { hashtags =>
@@ -137,7 +137,7 @@ class TwitterStreamService @Inject()(
               }
             }
 
-        override def initialState =
+        override def initialState: State[Any] =
           // Specifies the demand condition that you want to use. In this case,
           // you trigger when any of the outward streams is ready to receive more elements.
           State[Any](DemandFromAny(p.topicOutlets.values.toSeq :_*)) {
@@ -151,11 +151,63 @@ class TwitterStreamService @Inject()(
               SameState
           }
 
-        override def initialCompletionHandling = eagerClose
+        override def initialCompletionHandling: CompletionHandling = eagerClose
       }
     }
 
     Enumerator.empty[JsValue]
-    // TODO to be continued...
+
+    credentials.map { case (consumerKey, requestToken) =>
+
+      // Creates a FlowMaterializer that you'll need to be able to run the graph flow
+      implicit val fm = ActorMaterializer()(system)
+
+      // Builds the enumerator source
+      val enumerator = buildTwitterEnumerator(consumerKey, requestToken, topicsAndDigestRate.keys.toSeq)
+      // Defines a sink that the data will flow to. Uses a sink tah will produce a Reactive Streams publisher,
+      // which you'll later turn back into an enumerator.
+      val sink = Sink.publisher[JsValue]
+      // Creates a builder for a closed FlowGraph, passing in the sink as an output value that will be materialized
+      // when the flow runs
+      val graph = FlowGraph.closed(sink) { implicit builder => out =>
+        // Adds the source to the graph
+        val in = builder.add(enumeratorToSource(enumerator))
+        // Adds the custom splitter to the graph
+        val splitter = builder.add(new SplitByTopic[JsObject])
+        // Adds the groupers to the graph, one for each topic. These will group the specified number of elements
+        // together, depending on the rate of each topic.
+        val groupers = topicsAndDigestRate.map { case (topic, rate) =>
+            topic -> builder.add(Flow[JsObject].grouped(rate))
+        }
+        // Adds the taggers to the graph, one for each topic. These will take the grouped tweets and build one
+        // JSON object out of them, tagging it with the topic.
+        val taggers = topicsAndDigestRate.map { case (topic, _) =>
+          topic -> {
+            val t = Flow[Seq[JsObject]].map { tweets =>
+              Json.obj("topic" -> topic, "tweets" -> tweets)
+            }
+            builder.add(t)
+          }
+        }
+        // Adds a merger to the graph to merge all streams back together
+        val merger = builder.add(Merge[JsValue](topicsAndDigestRate.size))
+
+        // TODO: here we will need to wire the graph
+      }
+      // Runs the graph. The materialized result will be the publisher, which you can convert back to an enumerator.
+      val publisher = graph.run()
+      Streams.publisherToEnumerator(publisher)
+    }
+
   }
+
+
+  // Retrieves the Twitter credentials from application.conf
+  private def credentials: Option[(ConsumerKey, RequestToken)] = for {
+    apiKey      <- Play.configuration.getString("twitter.apiKey")
+    apiSecret   <- Play.configuration.getString("twitter.apiSecret")
+    token       <- Play.configuration.getString("twitter.token")
+    tokenSecret <- Play.configuration.getString("twitter.tokenSecret")
+  } yield (ConsumerKey(apiKey, apiSecret), RequestToken(token, tokenSecret))
+
 }
