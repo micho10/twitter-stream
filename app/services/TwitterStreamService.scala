@@ -155,8 +155,6 @@ class TwitterStreamService @Inject()(
       }
     }
 
-    Enumerator.empty[JsValue]
-
     credentials.map { case (consumerKey, requestToken) =>
 
       // Creates a FlowMaterializer that you'll need to be able to run the graph flow
@@ -192,11 +190,32 @@ class TwitterStreamService @Inject()(
         // Adds a merger to the graph to merge all streams back together
         val merger = builder.add(Merge[JsValue](topicsAndDigestRate.size))
 
-        // TODO: here we will need to wire the graph
+        // Connects your source to the splitter's inlet
+        builder.addEdge(in, splitter.in)
+        splitter
+          .topicOutlets
+          .zipWithIndex
+          // Repeats the wiring for each of the outlets of the splitter
+          .foreach { case ((topic, port), index) =>
+            val grouper = groupers(topic)
+            val tagger = taggers(topic)
+            // Connects the outlet to the splitter (the substream) to the grouper for this topic
+            builder.addEdge(port, grouper.inlet)
+            // Connects the outlet of the grouper to the inlet of the tagger
+            builder.addEdge(grouper.outlet, tagger.inlet)
+            // Connects the outlet of the tagger to one of the ports of the merger
+            builder.addEdge(tagger.outlet, merger.in(index))
+          }
+        // Connects the outlet of the merger to the inlet of the output publisher
+        builder.addEdge(merger.out, out.inlet)
+
       }
       // Runs the graph. The materialized result will be the publisher, which you can convert back to an enumerator.
       val publisher = graph.run()
       Streams.publisherToEnumerator(publisher)
+    } getOrElse {
+      Logger.error("Twitter credentials are not configured")
+      Enumerator.empty[JsValue]
     }
 
   }
