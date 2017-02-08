@@ -7,7 +7,7 @@
         <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
     </head>
     <body>
-        @if (topicsAndRate.nonEmpty) {
+        @if(topicsAndRate.nonEmpty) {
             <div class="row">
                 @topicsAndRate.keys.map { topic =>
                     <div id="@topic" class="col-md-@{ 12 / (topicsAndRate.size) }">
@@ -19,8 +19,6 @@
             /**
              * Defines a function that appends a tweet to a given topic column
              *
-             * @param topic
-             * @param text
              */
             function appendTweet(topic, text) {
                 var tweet = document.createElement("p");
@@ -40,7 +38,7 @@
                 };
             }
 
-            connect('@routes.Application.stream().webSocketURL()?@queryString');
+            connect('@routes.Application.reactiveStream().webSocketURL()?@queryString');
             </script>
         } else { No topics selected. }
     </body>
