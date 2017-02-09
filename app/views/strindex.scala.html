@@ -32,7 +32,7 @@
                 tweetSocket.onmessage = function (event) {
                     var data = JSON.parse(event.data);
                     data.tweets.forEach(function(tweet) {
-                        // Appends teh tweet to the right column
+                        // Appends the tweet to the right column
                         appendTweet(data.topic, tweet.text);
                     });
                 };

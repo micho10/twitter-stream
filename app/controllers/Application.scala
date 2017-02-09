@@ -43,7 +43,7 @@ class Application @Inject()(twitterstream: TwitterStreamService) extends Control
     *
     * @return
     */
-  def reactiveStream = WebSocket.using[JsValue] { request =>
+  def reactiveStream = WebSocket.using[JsValue] { implicit request =>
     val parsedTopics = parseTopicsAndDigestRate(request.queryString)
     // Creates the output enumerator using the streaming service you've built
     val out = twitterstream.stream(parsedTopics)
